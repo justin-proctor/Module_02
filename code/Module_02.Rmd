@@ -274,6 +274,9 @@ if (!dir.exists("../Rdata")) dir.create("../Rdata") # folder for Rdata objects
 ```{r saving table}
 # 1. Exporting our collapsed summary table as a universal flat text file
 write_csv(biological_signal, "../output/tables/penguin_species_mass_summary.csv")
+
+# 2. Saving our cleaned morphological cohort table as a native R binary file
+saveRDS(adelie_cohort, "../output/tables/clean_penguin_morphology_cohort.rds")
 ```
 
 ```{r saving figure}
