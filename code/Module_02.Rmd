@@ -251,10 +251,10 @@ mass_compare_plot <- penguins |>
     .groups = "drop"
   ) |>
   ggplot(aes(x = species, y = mean_mass, colour = island)) +
-  geom_point(size = 3) +
+  geom_point(size = 3, position = position_dodge(width = 0.4)) +
   geom_errorbar(aes(ymin = mean_mass - se_mass, 
                     ymax = mean_mass + se_mass), 
-                width = 0.2) +
+                width = 0.2,  position = position_dodge(width = 0.4)) +
   labs(title = "Mean Body Mass by Species and Island",
        subtitle = "Error bars represent standard SE",
        y = "Mean Body Mass (g)",
