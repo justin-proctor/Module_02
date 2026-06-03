@@ -193,3 +193,81 @@ print(biological_signal)
 
 ```
 
+```{r Challenge: Visualising Body Size and Shape of penguins}
+# Summary table
+penguins %>%
+drop_na(species, island, body_mass_g) %>%
+group_by(species, island) %>%
+summarise(
+mean_body_mass = mean(body_mass_g),
+.groups = "drop"
+)
+
+# Boxplot
+penguins %>%
+drop_na(species, island, body_mass_g) %>%
+ggplot(aes(x = species, y = body_mass_g, fill = island)) +
+geom_boxplot() +
+labs(
+title = "Body Mass by Species and Island",
+x = "Species",
+y = "Body Mass (g)"
+)
+```
+
+```{r Example: Visualising Mean Trends with Uncertainty}
+# Pipe directly from aggregation to plotting with error bars
+mass_compare_plot <- penguins |>
+  group_by(species, island) |>
+  summarise(
+    mean_mass = mean(body_mass_g, na.rm = TRUE),
+    sd_mass = sd(body_mass_g, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  ) |>
+  ggplot(aes(x = species, y = mean_mass, colour = island)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_mass - sd_mass, 
+                    ymax = mean_mass + sd_mass), 
+                width = 0.2) +
+  labs(title = "Mean Body Mass by Species and Island",
+       subtitle = "Error bars represent standard deviation",
+       y = "Mean Body Mass (g)",
+       x = "Species") +
+  theme_minimal()
+
+mass_compare_plot
+```
+
+```{r challenge: visualizing mean trends using SE instead of SD}
+# Pipe directly from aggregation to plotting with error bars
+mass_compare_plot <- penguins |>
+  group_by(species, island) |>
+  summarise(
+    mean_mass = mean(body_mass_g, na.rm = TRUE),
+    sd_mass = sd(body_mass_g, na.rm = TRUE),
+    n = n(),
+     se_mass = sd_mass / sqrt(n),  # Calculate standard error
+    .groups = "drop"
+  ) |>
+  ggplot(aes(x = species, y = mean_mass, colour = island)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_mass - se_mass, 
+                    ymax = mean_mass + se_mass), 
+                width = 0.2) +
+  labs(title = "Mean Body Mass by Species and Island",
+       subtitle = "Error bars represent standard SE",
+       y = "Mean Body Mass (g)",
+       x = "Species") +
+  theme_minimal()
+
+mass_compare_plot
+```
+
+```{r create folders for saving and exporting}
+# Create output directories if they do not exist:
+if (!dir.exists("outputs/figures")) dir.create("outputs/figures") # folder for figs
+if (!dir.exists("outputs/tables")) dir.create("outputs/tables") # folder for tables
+if (!dir.exists("Rdata")) dir.create("Rdata") # folder for Rdata objects
+```
+
