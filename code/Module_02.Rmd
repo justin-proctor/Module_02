@@ -266,8 +266,20 @@ mass_compare_plot
 
 ```{r create folders for saving and exporting}
 # Create output directories if they do not exist:
-if (!dir.exists("outputs/figures")) dir.create("outputs/figures") # folder for figs
-if (!dir.exists("outputs/tables")) dir.create("outputs/tables") # folder for tables
-if (!dir.exists("Rdata")) dir.create("Rdata") # folder for Rdata objects
+if (!dir.exists("../output/figures")) dir.create("../output/figures") # folder for figs
+if (!dir.exists("../output/tables")) dir.create("../output/tables") # folder for tables
+if (!dir.exists("../Rdata")) dir.create("../Rdata") # folder for Rdata objects
+```
+
+```{r saving table}
+# 1. Exporting our collapsed summary table as a universal flat text file
+write_csv(biological_signal, "../output/tables/penguin_species_mass_summary.csv")
+```
+
+```{r saving figure}
+ggsave("../output/figures/mass_compare_plot.png", 
+       plot = mass_compare_plot, 
+       width = 120, height = 120, 
+       units = "mm", dpi = 300)
 ```
 
