@@ -33,7 +33,42 @@ knitr::opts_chunk$set(
 	warning = FALSE)
 ```
 
-```{r}
+###Introductionn 
+Here we are going to wrangle in messy data on the Ross River Estuary fish surveys and produce final clean tables and figure.
+
+```{r housekeeping}
+rm(list =ls())
+```
+
+```{r packages}
 library(tidyverse)
+library(readxl)
+```
+
+```{r load metadata/files}
+metadata <- read_csv("../data/workshop2/estuary_metadata.csv")
+View(metadata)
+```
+
+```{r loading/creating main dataset}
+catch1 <- read_excel("../data/workshop2/estuary_catch_log.xlsx", sheet = 1)
+catch2 <- read_excel("../data/workshop2/estuary_catch_log.xlsx", sheet = 2)
+catch3 <- read_excel("../data/workshop2/estuary_catch_log.xlsx", sheet = 3)
+catch4 <- read_excel("../data/workshop2/estuary_catch_log.xlsx", sheet = 4)
+
+catch_data <- bind_rows(catch1, catch2, catch3, catch4)
+```
+
+```{r alternative method for loading files}
+file_path <- "../data/workshop2/estuary_catch_log.xlsx"
+catch_data2 <- excel_sheets(file_path) |> 
+  map_dfr(~read_excel(path = file_path, sheet = .x))
+```
+
+```{r}
+catch_data
+head(catch_data)
+glimpse(catch_data)
+str(catch_data)
 ```
 
