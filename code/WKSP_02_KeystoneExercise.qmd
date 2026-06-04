@@ -1,0 +1,39 @@
+---
+title: "WKSP_02_KeystoneExercise"
+author: "Justin Proctor"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+format: html
+output: 
+ html_document:
+    code_folding: show
+    collapse: no
+    df_print: paged
+    fig_caption: yes
+    fig_height: 6
+    fig_width: 10
+    highlight: textmate
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+## Module 2: R for Marine Science
+### Workshop 2: **Advanced Data Wrangling**
+
+## **Keystone exercise: Estuary Fish Survey - Data Rescue Mission**
+
+```{r setup, include=FALSE}
+# Set options, housekeeping
+knitr::opts_chunk$set(
+	echo = FALSE,
+	include = TRUE,
+	message = FALSE,
+	warning = FALSE)
+```
+
+```{r}
+library(tidyverse)
+```
+
