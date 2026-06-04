@@ -22,11 +22,16 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## MB5370 Module 2: R for Marine Science
+# MB5370 Module 2: R for Marine Science
 
-##Workshop 1: Foundations of Data Science — Wrangling and Plotting
+# Workshop 1: Foundations of Data Science — Wrangling and Plotting
 
 ## Introduction
+This rmd file covers all the material for the first R for Marine Science workshop, which focuses on foundational data science skills for marine scientists. We will cover the following topics:
+- Importing data from various file formats
+- Exploring and summarizing data structures
+- Wrangling data with the tidyverse framework
+
 ### Clear out environment
 ```{r check objects in environment}
 ## Inventory every active object currently residing in session RAM
@@ -63,7 +68,7 @@ acoustic_stream <- read_tsv(here::here("data/acoustic_telemetry_stream.txt"))
 fisheries_annual <- read_excel(here::here("data/fish_catch_data.xlsx"), sheet = "Commercial_2026")
 
 ```
-
+### Workflow
 ```{r loading in dataset}
 # Read in mangrove_data
 mangrove_data <- read_csv(file = here::here("data/mangrove_survey_raw.csv"))
@@ -284,5 +289,433 @@ ggsave("../output/figures/mass_compare_plot.png",
        plot = mass_compare_plot, 
        width = 120, height = 120, 
        units = "mm", dpi = 300)
+```
+
+
+# Workshop 2: Advanced data wrangling 
+## Extracting ecological signals from noisy systems
+
+## Introduction
+This rmd file covers all the material for the first R for Marine Science workshop. 
+Here we are going to cover:
+- Tidying data
+- Pivoting wider and longer
+- Separating and uniting variables
+- Dealing with stings and factors
+- Handling missing data values
+
+### Workflow
+```{r}
+library(tidyverse)
+```
+
+```{r load table1}
+table1
+```
+
+```{r compute rate per 10k}
+table1 %>% 
+  mutate(rate = cases / population * 10000)
+```
+
+```{r compute cases per year}
+table1 %>% 
+  count(year, wt = cases)
+```
+
+```{r visualise case changes over time}
+ggplot(table1, aes(year, cases)) + 
+  geom_line(aes(group = country), colour = "grey50") + 
+  geom_point(aes(colour = country))
+```
+
+```{r installing billboard dataset}
+#install.packages("billboard")
+summary(billboard)
+```
+
+```{r adjusting format of billboard using pivot_longer}
+billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), 
+    names_to = "week", 
+    values_to = "rank"
+  )
+```
+
+```{r dropping NA values out of dataset when songs werent in the top 100}
+billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), 
+    names_to = "week", 
+    values_to = "rank",
+    values_drop_na = TRUE)
+```
+
+```{r creating df dataset to practice pivot longer}
+df <- tribble(
+  ~id,  ~bp1, ~bp2,
+   "A",  100,  120,
+   "B",  140,  115,
+   "C",  120,  125
+)
+```
+
+```{r pivoting longer on df dataset}
+df |> 
+  pivot_longer(
+    cols = bp1:bp2,
+    names_to = "measurement",
+    values_to = "value"
+  )
+```
+
+```{r installing package for pivot wider practice}
+#install.packages("cms_patient_experience")
+summary(cms_patient_experience)
+```
+
+```{r using distinct to see full set of measures in the dataset}
+cms_patient_experience |> 
+  distinct(measure_cd, measure_title)
+```
+
+```{r applying pivot wider}
+cms_patient_experience |> 
+  pivot_wider(
+    names_from = measure_cd,
+    values_from = prf_rate
+  )
+```
+
+```{r applying pivot wider with id_cols to preserve org identifiers}
+cms_patient_experience |> 
+  pivot_wider(
+    id_cols = starts_with("org"),
+    names_from = measure_cd,
+    values_from = prf_rate
+  )
+```
+
+```{r}
+df2 <- tribble(
+  ~id, ~measurement, ~value,
+  "A",        "bp1",    100,
+  "B",        "bp1",    140,
+  "B",        "bp2",    115, 
+  "A",        "bp2",    120,
+  "A",        "bp3",    105
+)
+```
+
+
+```{r further visualizing pivot wider}
+df2 |> 
+  pivot_wider(
+    names_from = measurement,
+    values_from = value
+  )
+```
+
+```{r establishing row and column identifiers for pivot wider}
+df2 |> 
+  distinct(measurement) |> 
+  pull()
+```
+
+```{r establishing row and column identifiers for pivot wider}
+df2 |> 
+  select(-measurement, -value) |> 
+  distinct()
+```
+
+```{r combining results of previous two chunks to create a skeleton for pivot wider}
+df2 |> 
+  select(-measurement, -value) |> 
+  distinct() |> 
+  mutate(x = NA, y = NA, z = NA)
+```
+
+```{r using pivot longer on penguins data}
+library(palmerpenguins)
+
+# Create a long version of the penguins dataset
+
+penguins_long <- penguins |>
+  pivot_longer(
+    cols = c(bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g),
+    names_to = "measurement_type",
+    values_to = "value"
+  )
+# View the result
+head(penguins_long)
+```
+
+```{r visualizing new lengthened format}
+penguins_long |>
+  drop_na(value) |>
+  ggplot(aes(x = value, fill = species)) +
+  geom_histogram(bins = 30, alpha = 0.7, colour = "black") +
+  facet_wrap(~ measurement_type, scales = "free_x") +
+  theme_minimal() +
+  labs(
+    title = "Morphometric distributions across penguin species",
+    x = "Measurement value",
+    y = "Frequency"
+  )
+```
+
+```{r widening penguin data}
+mass_summary <- penguins |>
+  drop_na(body_mass_g) |>
+  group_by(species, island) |>
+  summarise(mean_mass = mean(body_mass_g))
+
+head(mass_summary)
+```
+
+```{r creating clean matrix}
+mass_matrix <- mass_summary |>
+  pivot_wider(
+    names_from = island,
+    values_from = mean_mass
+  )
+
+head(mass_matrix)
+```
+
+```{r load table}
+table3
+```
+
+```{r separating rate into cases and population}
+table3 %>% 
+  separate(rate, into = c("cases", "population"))
+```
+
+```{r rewriting the code above using a specific character to separate a column}
+table3 %>% 
+  separate(rate, into = c("cases", "population"), sep = "/")
+```
+
+```{r convert to integer values}
+table3 %>% 
+  separate(rate, into = c("cases", "population"), convert = TRUE)
+```
+
+```{r separating year into century and year - use this arrangement to separate the last two digits of each year.}
+table3 %>% 
+  separate(year, into = c("century", "year"), sep = 2)
+```
+
+```{r uniting century and year back into a single column}
+table5 %>% 
+  unite(new, century, year, sep = "")
+```
+
+```{r Standardising text with stringr using a messy dataset}
+# A remarkably messy data frame of field sites
+messy_sites <- tibble(
+  site_id = c(" Nelly Bay", "nelly_bay", "NELLY BAY", " Geoffrey_Bay ", "geoffrey bay")
+)
+
+# Using stringr within mutate to standardize the text
+clean_sites <- messy_sites |>
+  mutate(
+    # 1. Convert everything to lowercase
+    site_clean = str_to_lower(site_id),
+    # 2. Replace any spaces with underscores
+    site_clean = str_trim(site_clean),
+    # 3. Trim any leading or trailing whitespace (invisible spaces at the ends)
+    site_clean = str_replace_all(site_clean, pattern = " ", replacement = "_")
+  )
+
+print(clean_sites)
+```
+
+```{r using lubridate to align dates}
+library(lubridate)
+
+# Parsing different date formats
+date_1 <- dmy("25/12/2026")
+date_2 <- ymd("2026-12-25")
+
+# R now recognizes these as identical Date objects
+date_1 == date_2
+```
+
+```{r parsing with exact timestamps}
+# A tibble of raw sensor data with a messy character timestamp
+sensor_data <- tibble(
+  raw_time = c("14-05-2026 08:30:00", "14-05-2026 08:45:00", "14-05-2026 09:00:00"),
+  temperature = c(24.5, 24.6, 24.4)
+)
+
+# Converting character strings to true POSIXct datetime objects
+sensor_clean <- sensor_data |>
+  mutate(
+    true_time = dmy_hms(raw_time)
+  )
+
+print(sensor_clean)
+```
+
+```{r setting up two tables to demonstrate joining}
+# Table 1: Biological observation data
+observations <- tibble(
+  site_code = c("NB", "GB", "MI", "NB"),
+  species = c("Trout", "Snapper", "Trout", "Cod"),
+  count = c(5, 2, 1, 3)
+)
+
+# Table 2: Spatial metadata
+site_metadata <- tibble(
+  site_code = c("NB", "GB", "MI", "RP"),
+  zone = c("Marine National Park", "Conservation Park", "Habitat Protection", "General Use"),
+  lat = c(-19.16, -19.15, -19.14, -19.12)
+)
+```
+
+```{r joining data}
+# Joining metadata to our observations
+joined_data <- observations |>
+  left_join(site_metadata, by = join_by(site_code))
+
+print(joined_data)
+```
+
+```{r only keeping rows that have complete matches in both tables}
+matched_data <- observations |>
+  inner_join(site_metadata, by = join_by(site_code))
+glimpse(matched_data)
+```
+
+```{r using an anti_join() to find out exactly which site codes are misspelled or missing from metadata table.}
+# Which observations are missing from our metadata dictionary?
+missing_context <- observations |>
+  anti_join(site_metadata, by = join_by(site_code))
+```
+
+```{r using dplyr::na_if() to omit data-outputs where a concrete value actually represents a missing value}
+# Raw data from an old temperature logger
+logger_data <- tibble(
+  depth_m = c(10, 20, 30, 40),
+  temp_c = c(24.5, 24.1, -999, 23.5)) # -999 is a known sensor error code
+
+# Convert the -999 error codes to true NA values
+fixed_logger <- logger_data |>
+  mutate(temp_c = na_if(temp_c, -999))
+
+print(fixed_logger)
+```
+
+```{r Replacing missing values with coalesce()}
+# Simulate some count data
+shark_counts <- tibble(
+  site = c("Reef_A", "Reef_B", "Reef_C"),
+  shark_count = c(3, NA, 5)) # The NA here actually means 0 sharks were seen
+
+# Replace NA with 0 
+shark_fixed <- shark_counts |>
+  mutate(shark_count = coalesce(shark_count, 0))
+
+print(shark_fixed)
+```
+
+```{r identifying an NaN: value is mathematically impossible and indicates a division by zero or an undefined operation}
+cpue_data <- tibble(
+  site = c("Bay_1", "Bay_2"),
+  catch = c(10, 0),
+  effort_hours = c(2, 0))
+
+# Calculating CPUE (catch / effort)
+cpue_calc <- cpue_data |>
+  mutate(
+    cpue = catch / effort_hours)
+
+print(cpue_calc)
+```
+
+```{r loading raw catch data to address NaN issue}
+raw_catch <- tibble(
+  site = c("Reef_1", "Reef_1", "Reef_2"),
+  species = c("Pmaculatus", "Pleopardus", "Pmaculatus"),
+  count = c(5, 2, 8))
+```
+
+```{r explicitly creating rows for the missing combinations, and allowing the resulting NAs to be filled with 0}
+# Force inclusion of hidden zero-catch data
+full_catch_matrix <- raw_catch |>
+  complete(site, species, fill = list(count = 0))
+
+print(full_catch_matrix)
+```
+
+```{r removing the entire row using drop_na() as a final/last resort option}
+sensor_log <- tibble(
+  day = 1:4,
+  salinity = c(35.2, 35.1, NA, 35.3)
+)
+
+# Remove any row where salinity is missing
+clean_log <- sensor_log |>
+  drop_na(salinity)
+```
+
+### Exercise 1: Cleaning the messy metadata
+```{r}
+# Make sure packages are loaded
+library(tidyverse)
+library(lubridate)
+library(palmerpenguins)
+
+# The messy metadata provided by your colleague
+island_metadata <- tibble(
+  island_name = c(" biscoe", "Dream ", "Torgersen"),
+  station_install = c("15/01/2003", "22-03-2004", "05/11/2001"),
+  latitude = c(-64.81, -64.73, -64.76)
+)
+
+print(island_metadata)
+```
+
+```{r cleaned up dataset}
+clean_metadata <- island_metadata |>
+  mutate(
+    # Clean island names: remove spaces + standardize case
+    island_name = stringr::str_trim(island_name),
+    island_name = stringr::str_to_title(island_name),
+
+    # Convert to Date (handles mixed formats)
+    station_install = lubridate::dmy(station_install)
+  )
+
+print(clean_metadata)
+```
+
+### Exercise 2: The Relational Join
+```{r}
+penguins_spatial <- penguins |>
+  left_join(clean_metadata, by = join_by(island == island_name))
+
+# Scroll to the right to see the new columns
+head(penguins_spatial)
+```
+
+###Exercise 3: The Wide Summary Matrix
+```{r}
+max_mass_table <- penguins_spatial |>
+  drop_na(body_mass_g) |>
+  group_by(species, island) |>
+  summarise(
+    max_body_mass_g = max(body_mass_g),
+    .groups = "drop"
+  ) |>
+  pivot_wider(
+    names_from = island,
+    values_from = max_body_mass_g
+  )
+
+max_mass_table
 ```
 
