@@ -39,17 +39,20 @@ knitr::opts_chunk$set(
 Here we are going to wrangle in messy data on the Ross River Estuary fish surveys and produce final clean tables and figure.
 
 ### Housekeeping
+
 ```{r housekeeping}
 rm(list =ls())
 ```
 
 ### Packages
+
 ```{r packages}
 library(tidyverse)
 library(readxl)
 ```
 
 ### Load Files/Main Dataset
+
 ```{r load metadata/files}
 metadata <- read_csv("../data/workshop2/estuary_metadata.csv")
 View(metadata)
@@ -81,6 +84,7 @@ catch_data2 <- excel_sheets(file_path) |>
 ```
 
 ### Examine Data
+
 ```{r}
 catch_data
 head(catch_data)
@@ -98,13 +102,10 @@ catch_data |>
   distinct(species)
 ```
 
-OK, so we have four species in there as well as four sites which look to be located at different points on the Ross River.
-Need to:
-- Fix site names and place in reasonable order. 
-- Can decide this now or we can load the metadata and ensure consistency
-- Fix species names - to do this we'll need to make consistent and then use the taxonomic dictionary to translate to scientific names.
+OK, so we have four species in there as well as four sites which look to be located at different points on the Ross River. Need to: - Fix site names and place in reasonable order. - Can decide this now or we can load the metadata and ensure consistency - Fix species names - to do this we'll need to make consistent and then use the taxonomic dictionary to translate to scientific names.
 
 ### Load, Inspect, and Standardize Metadata
+
 ```{r inspect metadata}
 head(metadata)
 glimpse(metadata)
@@ -138,7 +139,8 @@ catch_data |>
 glimpse(metadata)
 ```
 
-### Load Taxanomic Dictionary and Sensor Data
+### Load Taxonomic Dictionary and Sensor Data
+
 ```{r load taxonimic dictionary}
 species_dict <- read_csv("../data/workshop2/species_dictionary.csv")
 head(species_dict)
@@ -156,6 +158,7 @@ summary(sensor_row)
 ```
 
 ### Wrangle Sonde Data
+
 ```{r celan up sensor data}
 sensor_data <- sensor_row |> 
   mutate(
@@ -182,12 +185,14 @@ sensor_daily <-
 ```
 
 ### Notes:
+
 -   Environmental variables needed cleaning:
 -   Turbidity data has a failed value (-999)
 -   Salinity had some negative values which are not possible and should be converted to NA
 -   Site ok
 
 ### Wrangle Catch Data
+
 ```{r standardize variable in the catch log to match dictionaries}
 catch_data <- catch_data |>
   mutate(
@@ -216,9 +221,10 @@ catch_data <- catch_data |>
 -   Join with metadata and sensor data
 -   Implicit zero observations
 
-4 x spp 4 x sites 30 surveys = 4*4*30
+4 x spp 4 x sites 30 surveys = 4\*4\*30
 
 ### Join Catch Data with Metadata and Sensor Data
+
 ```{r join catch data with metadata and sensor data}
 catch_data_final <- catch_data |>
   left_join(metadata, by = join_by(site == site_name)) |>
@@ -226,6 +232,7 @@ catch_data_final <- catch_data |>
 ```
 
 ### Produce Final Table
+
 ```{r}
 catch_data_final |>
   complete(
@@ -238,8 +245,10 @@ catch_data_final |>
   )
 ```
 
-### Produce summary table of salinity by species and zone
+### Produce Summary Table of Salinity by Species and Zone
+
 we might want to first check that there is an actual difference in salinity among zone
+
 ```{r}
 sal_sum <- 
   catch_data_final |>
@@ -263,7 +272,8 @@ catch_data_final |>
   )
 ```
 
-### Make point and SD Plot
+### Make Point and SD Plot
+
 ```{r}
 sal_sum |>
   ggplot(aes(x = zone, y = median_salinity)) +
@@ -276,7 +286,8 @@ sal_sum |>
 )
 ```
 
-### Calculate mean and SE of catch data
+### Calculate Mean and SE of Catch Data
+
 ```{r}
 fish_stats <- catch_data_final |>
   group_by(zone, scientific_name) |>
@@ -287,8 +298,8 @@ fish_stats <- catch_data_final |>
   )
 ```
 
+### Make Point and SE plot of Catch Data by Zone and Species
 
-### Make point and SE plot of catch data by zone and species
 ```{r}
 fish_stats |> 
   ggplot(aes(x = zone, y = mean_catch, fill = zone)) +
@@ -314,4 +325,3 @@ fish_stats |>
     fill = "Spatial Zone"
   )
 ```
-
