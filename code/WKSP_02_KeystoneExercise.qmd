@@ -20,9 +20,10 @@ editor_options:
 ---
 
 ## Module 2: R for Marine Science
-### Workshop 2: **Advanced Data Wrangling**
 
-## **Keystone exercise: Estuary Fish Survey - Data Rescue Mission**
+## Workshop 2: **Advanced Data Wrangling**
+
+# **Keystone exercise: Estuary Fish Survey - Data Rescue Mission**
 
 ```{r setup, include=FALSE}
 # Set options, housekeeping
@@ -33,18 +34,22 @@ knitr::opts_chunk$set(
 	warning = FALSE)
 ```
 
-###Introductionn 
+### Introduction
+
 Here we are going to wrangle in messy data on the Ross River Estuary fish surveys and produce final clean tables and figure.
 
+### Housekeeping
 ```{r housekeeping}
 rm(list =ls())
 ```
 
+### Packages
 ```{r packages}
 library(tidyverse)
 library(readxl)
 ```
 
+### Load Files/Main Dataset
 ```{r load metadata/files}
 metadata <- read_csv("../data/workshop2/estuary_metadata.csv")
 View(metadata)
@@ -55,8 +60,18 @@ catch1 <- read_excel("../data/workshop2/estuary_catch_log.xlsx", sheet = 1)
 catch2 <- read_excel("../data/workshop2/estuary_catch_log.xlsx", sheet = 2)
 catch3 <- read_excel("../data/workshop2/estuary_catch_log.xlsx", sheet = 3)
 catch4 <- read_excel("../data/workshop2/estuary_catch_log.xlsx", sheet = 4)
+```
 
+```{r inspect individual tabs}
+catch1
+catch2
+catch3
+catch4
+```
+
+```{r bind rows together}
 catch_data <- bind_rows(catch1, catch2, catch3, catch4)
+rm(catch1, catch2, catch3, catch4) #clean up the environment
 ```
 
 ```{r alternative method for loading files}
@@ -65,10 +80,238 @@ catch_data2 <- excel_sheets(file_path) |>
   map_dfr(~read_excel(path = file_path, sheet = .x))
 ```
 
+### Examine Data
 ```{r}
 catch_data
 head(catch_data)
 glimpse(catch_data)
 str(catch_data)
+```
+
+Can't tell from these outputs how many levels of site and species we have. Two options: let's check those explicitly by using distinct() or can convert to factors Let's look at the distinct values first, as we might need to clean before converting to factor vars.
+
+```{r}
+catch_data |>
+  distinct(site)
+
+catch_data |>
+  distinct(species)
+```
+
+OK, so we have four species in there as well as four sites which look to be located at different points on the Ross River.
+Need to:
+- Fix site names and place in reasonable order. 
+- Can decide this now or we can load the metadata and ensure consistency
+- Fix species names - to do this we'll need to make consistent and then use the taxonomic dictionary to translate to scientific names.
+
+### Load, Inspect, and Standardize Metadata
+```{r inspect metadata}
+head(metadata)
+glimpse(metadata)
+```
+
+site names are all over the place in metadata - will have to standardize
+
+```{r clean up site names}
+catch_data <- catch_data |>
+  mutate(
+    site = str_to_lower(str_trim(site)),
+    site = str_replace_all(site, " ", "_")) |> 
+  # Convert all chr to fct
+  mutate(across(where(is.character), as_factor)
+  )
+
+metadata <- metadata |>
+  mutate(
+    site_name = str_to_lower(str_trim(site_name)),
+    site_name = str_replace_all(site_name, " ", "_")) |> 
+  # Convert all chr to fct
+  mutate(across(where(is.character), as_factor)
+  )
+```
+
+```{r recheck}
+catch_data |> 
+  str()
+# catch_data |> 
+#   distinct(site)
+glimpse(metadata)
+```
+
+### Load Taxanomic Dictionary and Sensor Data
+```{r load taxonimic dictionary}
+species_dict <- read_csv("../data/workshop2/species_dictionary.csv")
+head(species_dict)
+```
+
+```{r load the sensor data}
+sensor_row <- read_csv("../data/workshop2/estuary_sonde_data.csv")
+```
+
+```{r check sensor data}
+head(sensor_row)
+str(sensor_row)
+glimpse(sensor_row)
+summary(sensor_row)
+```
+
+### Wrangle Sonde Data
+```{r celan up sensor data}
+sensor_data <- sensor_row |> 
+  mutate(
+    # parse the messy character string (day/month/year hour:minute)
+    datetime = dmy_hm(timestamp),
+    # convert the -999.0 hardware error to a true NA
+    turbidity = na_if (turbidity, -999.0),
+    # convert negative salinity values to NA
+    salinity = ifelse(salinity < 0, NA, salinity),
+  )
+```
+
+```{r clean up daily sensor data}
+sensor_daily <- 
+  sensor_data |> 
+  mutate(date = as_date(floor_date(datetime, "day"))) |>
+  group_by(site, date) |> 
+  summarise(
+    mean_temp = mean(temperature, na.rm = TRUE),
+    mean_salinity = mean(salinity, na.rm = TRUE),
+    mean_turbidity = mean(turbidity, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+### Notes:
+-   Environmental variables needed cleaning:
+-   Turbidity data has a failed value (-999)
+-   Salinity had some negative values which are not possible and should be converted to NA
+-   Site ok
+
+### Wrangle Catch Data
+```{r standardize variable in the catch log to match dictionaries}
+catch_data <- catch_data |>
+  mutate(
+    site = str_to_lower(str_trim(site)),
+    site = str_replace_all(site, " ", "_"),
+    species = str_to_lower(str_trim(species)),
+    species = str_replace_all(species, " ", "_")
+  )
+```
+
+```{r check common names in catch log match those in the taxonomic dictionary}
+catch_data |> 
+  distinct(species)
+species_dict |>
+  distinct(common_name)
+```
+
+```{r taxonomic translation (common to scientific)}
+catch_data <- catch_data |>
+  mutate(common_name = species) |>
+  left_join(species_dict, by = join_by(common_name)) |>
+```
+
+### Need to:
+
+-   Join with metadata and sensor data
+-   Implicit zero observations
+
+4 x spp 4 x sites 30 surveys = 4*4*30
+
+### Join Catch Data with Metadata and Sensor Data
+```{r join catch data with metadata and sensor data}
+catch_data_final <- catch_data |>
+  left_join(metadata, by = join_by(site == site_name)) |>
+  left_join(sensor_daily, by = join_by(site, date))
+```
+
+### Produce Final Table
+```{r}
+catch_data_final |>
+  complete(
+    nesting(site, date, lat, lon, zone, mean_temp, mean_salinity, mean_turbidity),
+    scientific_name
+  ) |>
+  mutate(
+    #convert the resulting NA counts to 0
+    count = coalesce(count, 0)
+  )
+```
+
+### Produce summary table of salinity by species and zone
+we might want to first check that there is an actual difference in salinity among zone
+```{r}
+sal_sum <- 
+  catch_data_final |>
+  group_by(scientific_name, zone) |>
+  summarize(
+    sem_salinity = sd(mean_salinity) / sqrt(n()),
+    sd_salinity = sd(mean_salinity, na.rm = TRUE),
+    median_salinity = median(mean_salinity, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# or with plotrix
+library(plotrix)
+catch_data_final |>
+  group_by(scientific_name, zone) |>
+  summarize(
+    sem_salinity = std.error(count),
+    # sd_salinity = sd(mean_salinity, na.rm = TRUE),
+    median_salinity = median(mean_salinity, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+### Make point and SD Plot
+```{r}
+sal_sum |>
+  ggplot(aes(x = zone, y = median_salinity)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = median_salinity - sd_salinity, ymax = median_salinity + sd_salinity), width = 0.2) +
+  theme_minimal() +
+  labs(title = "Median Salinity by Zone with Standard Deviation Error Bars", 
+       x = "Zone", 
+       y = "Median Salinity (ppt)"
+)
+```
+
+### Calculate mean and SE of catch data
+```{r}
+fish_stats <- catch_data_final |>
+  group_by(zone, scientific_name) |>
+  summarize(
+    mean_catch = mean(count),
+    sem_catch = sd(count) / sqrt(n()),
+    .groups = "drop"
+  )
+```
+
+
+### Make point and SE plot of catch data by zone and species
+```{r}
+fish_stats |> 
+  ggplot(aes(x = zone, y = mean_catch, fill = zone)) +
+  geom_point(position = "dodge", size = 2, pch = 23) +
+  #geom_line(group = 1) +
+  geom_errorbar(aes(ymin = mean_catch - sem_catch, ymax = mean_catch + sem_catch), 
+                position = position_dodge(0.9), width = 0.2) +
+  # add in points from master data
+  # geom_point(data = catch_data_final, aes(x = zone, y = count), 
+  #           position = position_jitter(width = 0.2), alpha = 0.5, size = 1, inherit.aes = FALSE) +
+  facet_wrap(~ scientific_name, scales = "fixed") +
+  theme_bw() +
+  theme(
+    strip.text = element_text(face = "italic", size = 10, colour = "grey20"),
+   # legend.position = "bottom"
+    legend.position = "none"
+  ) +
+  labs(
+    #title = "Predatory Fish Abundance across Estuarine Salinity Gradients",
+    #subtitle = "Ross River Estuary System, May 2026",
+    x = "Spatial Zone",
+    y = "Abundance (per day)",
+    fill = "Spatial Zone"
+  )
 ```
 
