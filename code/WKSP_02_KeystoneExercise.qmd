@@ -55,7 +55,7 @@ library(readxl)
 
 ```{r load metadata/files}
 metadata <- read_csv("../data/workshop2/estuary_metadata.csv")
-View(metadata)
+#View(metadata)
 ```
 
 ```{r loading/creating main dataset}
