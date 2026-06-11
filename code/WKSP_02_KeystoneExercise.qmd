@@ -36,7 +36,7 @@ knitr::opts_chunk$set(
 
 ### Introduction
 
-Here we are going to wrangle in messy data on the Ross River Estuary fish surveys and produce final clean tables and figure.
+Here we are going to wrangle in messy data on the Ross River estuary fish surveys and produce final clean tables and figure. We have 4 separate files that were provided to us by a former PhD student. We know we have data for 4 sites, 4 species, and 30 days of sampling. We also have metadata on the sites and sensor data on the environmental conditions at each site.
 
 ### Housekeeping
 
@@ -213,7 +213,7 @@ species_dict |>
 ```{r taxonomic translation (common to scientific)}
 catch_data <- catch_data |>
   mutate(common_name = species) |>
-  left_join(species_dict, by = join_by(common_name)) |>
+  left_join(species_dict, by = join_by(common_name))
 ```
 
 ### Need to:
@@ -222,6 +222,8 @@ catch_data <- catch_data |>
 -   Implicit zero observations
 
 4 x spp 4 x sites 30 surveys = 4\*4\*30
+
+But we only have 427 rows of data - doesn't seem right. There are some days where there were zero counts of certain species at different sites. We'll need to wrangle these into a complete dataset with 480 rows, where the zero counts are explicitly represented as 0 rather than NA. This is important for our subsequent analyses and visualisations, as we want to be able to distinguish between true absences (0) and missing data (NA).
 
 ### Join Catch Data with Metadata and Sensor Data
 
@@ -245,73 +247,134 @@ catch_data_final |>
   )
 ```
 
-### Produce Summary Table of Salinity by Species and Zone
+# MAIN DATA WRANGLE DONE
 
-we might want to first check that there is an actual difference in salinity among zone
+## Pivot to Thinking About Ecological Hypotheses
+
+## Differences in Environmental Variables across Zones:
+
+### Salinity
 
 ```{r}
+# Let's make a table
 sal_sum <- 
   catch_data_final |>
-  group_by(scientific_name, zone) |>
-  summarize(
-    sem_salinity = sd(mean_salinity) / sqrt(n()),
+  group_by(zone) |>
+  summarise(
+   # sem_salinity = sd(mean_salinity) / sqrt(n()),
     sd_salinity = sd(mean_salinity, na.rm = TRUE),
     median_salinity = median(mean_salinity, na.rm = TRUE),
     .groups = "drop"
   )
 
-# or with plotrix
-library(plotrix)
-catch_data_final |>
-  group_by(scientific_name, zone) |>
-  summarize(
-    sem_salinity = std.error(count),
-    # sd_salinity = sd(mean_salinity, na.rm = TRUE),
-    median_salinity = median(mean_salinity, na.rm = TRUE),
-    .groups = "drop"
-  )
-```
-
-### Make Point and SD Plot
-
-```{r}
-sal_sum |>
+# And from this a plot
+sal_sum |> 
   ggplot(aes(x = zone, y = median_salinity)) +
   geom_point() +
   geom_errorbar(aes(ymin = median_salinity - sd_salinity, ymax = median_salinity + sd_salinity), width = 0.2) +
   theme_minimal() +
-  labs(title = "Median Salinity by Zone with Standard Deviation Error Bars", 
-       x = "Zone", 
-       y = "Median Salinity (ppt)"
-)
+  labs(#title = "Median Salinity by Zone with Standard Deviation Error Bars",
+       x = "Zone",
+       y = "Median Salinity (ppt)")
 ```
 
-### Calculate Mean and SE of Catch Data
+Definitely differences in salinity, as we'd expect!! And we know there has been work on some of these species about responses to salinity gradients.
+
+Let's check the other two env vars too, just to be sure.
+
+### Turbidity
+
+```{r}
+turb_sum <- 
+  catch_data_final |>
+  group_by(zone) |>
+  summarise(
+    sd_turbidity = sd(mean_turbidity, na.rm = TRUE),
+    median_turbidity = median(mean_turbidity, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+turb_sum |>
+  ggplot(aes(x = zone, y = median_turbidity)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = median_turbidity - sd_turbidity, ymax = median_turbidity + sd_turbidity), width = 0.2) +
+  theme_minimal() +
+  labs(#title = "Median Turbidity by Zone with Standard Deviation Error Bars",
+       x = "Zone",
+       y = "Median Turbidity (NTU)")
+```
+
+### Temperature
+
+```{r}
+temp_sum <- 
+  catch_data_final |>
+  group_by(zone) |>
+  summarise(
+    sd_temperature = sd(mean_temp, na.rm = TRUE),
+    median_temperature = median(mean_temp, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+temp_sum |>
+  ggplot(aes(x = zone, y = median_temperature)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = median_temperature - sd_temperature, ymax = median_temperature + sd_temperature), width = 0.2) +
+  theme_minimal() +
+  labs(#title = "Median Temperature by Zone with Standard Deviation Error Bars",
+       x = "Zone",
+       y = "Median Temperature (°C)")
+
+```
+
+OK so we'll continue with salinity as our main env var of interest, but we know that there are also differences in turbidity and temperature across the zones, which could also be influencing fish abundance patterns. We can discuss this in the interpretation of our results and consider potential confounding effects of these other environmental variables in our discussion.
+
+### Publication Quality Salinity Plot
+
+```{r}
+#| fig-cap: "Salinity Gradient across zones. Ross River Estuary System, Townsville, NQ, Australia May 2026."
+
+sal_sum |> 
+  ggplot(aes(x = zone, y = median_salinity)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = median_salinity - sd_salinity, ymax = median_salinity + sd_salinity), width = 0.2) +
+  theme_minimal() +
+  labs(#title = "Median Salinity by Zone with Standard Deviation Error Bars",
+       x = "Zone",
+       y = "Median Salinity (ppt)")
+  
+```
+
+## Patterns in Fish Abundance
+
+### Calculate Summary Stats
 
 ```{r}
 fish_stats <- catch_data_final |>
   group_by(zone, scientific_name) |>
-  summarize(
+  summarise(
     mean_catch = mean(count),
     sem_catch = sd(count) / sqrt(n()),
     .groups = "drop"
   )
 ```
 
-### Make Point and SE plot of Catch Data by Zone and Species
+# Plot of Mean Catch by Zone and Species with Error Bars and Jittered Points
 
 ```{r}
 fish_stats |> 
   ggplot(aes(x = zone, y = mean_catch, fill = zone)) +
-  geom_point(position = "dodge", size = 2, pch = 23) +
-  #geom_line(group = 1) +
+  geom_line(group = 1) +
+  # add in points from master data
+  geom_point(data = catch_data_final, aes(x = zone, y = count), 
+             position = position_jitter(width = 0.2), alpha = 0.2, size = 1, inherit.aes = FALSE) +
+  geom_point(position = "dodge", size = 4, pch = 23) +
+  
   geom_errorbar(aes(ymin = mean_catch - sem_catch, ymax = mean_catch + sem_catch), 
                 position = position_dodge(0.9), width = 0.2) +
-  # add in points from master data
-  # geom_point(data = catch_data_final, aes(x = zone, y = count), 
-  #           position = position_jitter(width = 0.2), alpha = 0.5, size = 1, inherit.aes = FALSE) +
+  
   facet_wrap(~ scientific_name, scales = "fixed") +
-  theme_bw() +
+  theme_minimal() +
   theme(
     strip.text = element_text(face = "italic", size = 10, colour = "grey20"),
    # legend.position = "bottom"
