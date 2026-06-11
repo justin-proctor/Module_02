@@ -452,7 +452,7 @@ head(penguins_long)
 ```
 
 ```{r visualizing new lengthened format}
-penguins_long |>
+penguin_morphometric_plot <- penguins_long |>
   drop_na(value) |>
   ggplot(aes(x = value, fill = species)) +
   geom_histogram(bins = 30, alpha = 0.7, colour = "black") +
@@ -463,6 +463,11 @@ penguins_long |>
     x = "Measurement value",
     y = "Frequency"
   )
+
+ggsave("../output/penguin_morphometric_dist.png", 
+       plot = penguin_morphometric_plot, 
+       width = 120, height = 120, 
+       units = "mm", dpi = 300)
 ```
 
 ```{r widening penguin data}
