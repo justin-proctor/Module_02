@@ -1,3 +1,5 @@
 # MB5370 Module 2: R for Marine Science
 
 This module covers advanced data science application. The module will handle noisy environmental monitoring pipelines, reverse-engineer high-impact journal visualizations, manipulate native spatial data sets, and generate automated, reproducible scientific reports.
+
+Throughout the four workshops, I developed practical data science workflows in R for handling real-world marine datasets, including data cleaning, validation, reshaping, and visualization using the tidyverse and ggplot2. I learned to build reproducible data wrangling pipelines, apply tidy data principles, create publication-quality figures, reconstruct and critique scientific visualizations, and communicate analytical results through Quarto reports. The module also introduced spatial analysis in R using packages such as sf, terra, and tmap, covering coordinate reference systems, spatial data manipulation, and map creation. Together, these exercises strengthened my ability to manage, analyze, visualize, and communicate complex marine science data using reproducible, version-controlled workflows suitable for scientific research and professional consulting.
