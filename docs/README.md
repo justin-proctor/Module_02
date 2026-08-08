@@ -1,1 +1,1 @@
-This folder is for storing project documents, html files, and figure images
+This folder is for storing project documents and html files
